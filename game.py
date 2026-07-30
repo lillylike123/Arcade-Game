@@ -4,10 +4,8 @@ import random
 import math
 import numpy as np
 
-
 pygame.init()
 pygame.mixer.init(frequency=44100, size=-16, channels=2)
-
 
 CARDWIDTH = 240
 CARDHEIGHT = 135
@@ -20,13 +18,12 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Procedural Data-Sonification Arcade Engine")
 clock = pygame.time.Clock()
 
-font = pygame.font.SysFont("Courier", 20, bold=True)
-small_font = pygame.font.SysFont("Courier", 12)
+font = pygame.font.SysFont("Consolas", 24, bold=True)
+small_font = pygame.font.SysFont("Consolas", 16)
 
 class SoundEngine:
     def __init__(self):
         self.sample_rate = 44100
-        
         self.scales = {
             'ambient': [130.81, 146.83, 164.81, 196.00, 220.00, 261.63],
             'cyber': [110.00, 123.47, 146.83, 164.81, 196.00, 246.94, 293.66],
@@ -48,7 +45,6 @@ class SoundEngine:
         else:
             wave = np.sin(2 * np.pi * frequency * t)
 
-        
         envelope = np.exp(-3.0 * t / (duration_ms / 1000.0))
         audio_data = wave * envelope * volume
         
@@ -63,9 +59,9 @@ class SoundEngine:
         scale = self.scales[self.current_scale]
         index = int((x_pos / CARDWIDTH) * len(scale)) % len(scale)
         base_freq = scale[index]
-        
         modifier = 1.0 + ((CARDHEIGHT - y_pos) / CARDHEIGHT)
         return base_freq * modifier
+
 
 class ParticleSystem:
     def __init__(self):
@@ -140,15 +136,15 @@ class GameSession:
                 self.player_y += self.player_speed
                 moved = True
 
+        
             self.player_x = max(10, min(CARDWIDTH - 10, self.player_x))
             self.player_y = max(10, min(CARDHEIGHT - 10, self.player_y))
-
-    
+        
             if moved and self.frame_counter % 8 == 0:
                 freq = self.synth.get_data_mapped_frequency(self.player_x, self.player_y)
                 self.synth.play_tone(freq, duration_ms=80, volume=0.2, wave_type='square')
 
-    
+        
             for obs in self.obstacles:
                 obs['x'] += obs['dx']
                 obs['y'] += obs['dy']
@@ -159,7 +155,6 @@ class GameSession:
                     obs['dy'] *= -1
                     self.synth.play_tone(95, duration_ms=50, volume=0.1, wave_type='sawtooth')
 
-                
                 if (self.player_x - self.player_size < obs['x'] + obs['w'] and
                     self.player_x + self.player_size > obs['x'] and
                     self.player_y - self.player_size < obs['y'] + obs['h'] and
@@ -178,14 +173,14 @@ class GameSession:
                 pickup_freq = self.synth.get_data_mapped_frequency(self.item_x, self.item_y) * 1.5
                 self.synth.play_tone(pickup_freq, duration_ms=120, volume=0.4, wave_type='sine')
                 
-                
+            
                 self.item_x = random.randint(20, CARDWIDTH - 20)
                 self.item_y = random.randint(20, CARDHEIGHT - 20)
 
     def draw(self, surface):
         surface.fill((15, 15, 25)) 
 
-
+        
         pygame.draw.rect(surface, (50, 50, 80), (10 * SCALE, 10 * SCALE, (CARDWIDTH - 20) * SCALE, (CARDHEIGHT - 20) * SCALE), 2)
 
         if self.game_state == 'START':
@@ -198,29 +193,99 @@ class GameSession:
             surface.blit(info_surf, (SCREEN_WIDTH // 2 - info_surf.get_width() // 2, 90 * SCALE))
 
         elif self.game_state == 'PLAYING' or self.game_state == 'SHOP':
-            
+        
             pulse_rad = int((self.player_size + math.sin(pygame.time.get_ticks() * 0.01) * 2) * SCALE)
             pygame.draw.circle(surface, (255, 215, 0), (int(self.item_x * SCALE), int(self.item_y * SCALE)), pulse_rad // 2)
 
-        
             for obs in self.obstacles:
-                pygame.draw.rect(surface, (255, 60, 90), (obs['x'] * SCALE, obs ['y'] * SCALE, obs ['w'] * SCALE, obs['h'] * SCALE))
+                pygame.draw.rect(surface, (255, 60, 90), (obs['x'] * SCALE, obs['y'] * SCALE, obs['w'] * SCALE, obs['h'] * SCALE))
 
-            pygame.draw.circle(surface, (0,255, 280), (int(self.player_x * SCALE), int(self.player_y * SCALE)), self.player_size * SCALE // 2)
+        
+            pygame.draw.circle(surface, (0, 255, 180), (int(self.player_x * SCALE), int(self.player_y * SCALE)), self.player_size * SCALE // 2)
 
             self.particles.update_and_draw(surface)
 
             hud_text = small_font.render(f"COINS: {self.coins} | SCORE: {self.score} | SPEED: {self.player_speed}", True, (255, 255, 255))
-            controls_text = small_font.render("[P] Shop / [Q] Quit", True (150, 150, 150))
+            controls_text = small_font.render("[P] Shop / [Q] Quit", True, (150, 150, 150))
             surface.blit(hud_text, (15 * SCALE, 12 * SCALE))
-            surface.blit(controls_text, (15 * SCALE, 22))
+            surface.blit(controls_text, (15 * SCALE, 22 * SCALE))
 
-            if self.game_state =='SHOP':
-                overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SCRALPHA)
-                overlay.fill(0, 0, 0, 180))
+            if self.game_state == 'SHOP':
+                
+                overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+                overlay.fill((0, 0, 0, 180))
                 surface.blit(overlay, (0, 0))
 
-                shop_title = font.render("DATA SYTH SHOP (UPGRADES)", True, (255, 255, 0))
+                shop_title = font.render("DATA SYNTH SHOP (UPGRADES)", True, (255, 255, 0))
+                opt1 = small_font.render(f"[1] Speed Boost (Cost: {self.speed_cost} Coins)", True, (255, 255, 255))
+                opt2 = small_font.render(f"[2] Expansion Array Size (Cost: {self.size_cost} Coins)", True, (255, 255, 255))
+                exit_shop = small_font.render("Press [P] or [ESC] to Return to Game Loop", True, (180, 180, 180))
+
+                surface.blit(shop_title, (SCREEN_WIDTH // 2 - shop_title.get_width() // 2, 25 * SCALE))
+                surface.blit(opt1, (SCREEN_WIDTH // 2 - opt1.get_width() // 2, 55 * SCALE))
+                surface.blit(opt2, (SCREEN_WIDTH // 2 - opt2.get_width() // 2, 75 * SCALE))
+                surface.blit(exit_shop, (SCREEN_WIDTH // 2 - exit_shop.get_width() // 2, 105 * SCALE))
+
+        elif self.game_state == 'GAMEOVER':
+            go_surf = font.render("SYSTEM CRASH (GAME OVER)", True, (255, 50, 50))
+            score_surf = small_font.render(f"Final Data Score Recorded: {self.score}", True, (255, 255, 255))
+            restart_surf = small_font.render("Press 'R' to Reboot Core System", True, (200, 200, 200))
+            
+            surface.blit(go_surf, (SCREEN_WIDTH // 2 - go_surf.get_width() // 2, 45 * SCALE))
+            surface.blit(score_surf, (SCREEN_WIDTH // 2 - score_surf.get_width() // 2, 75 * SCALE))
+            surface.blit(restart_surf, (SCREEN_WIDTH // 2 - restart_surf.get_width() // 2, 95 * SCALE))
+
+
+game = GameSession()
+running = True
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+            
+        elif event.type == pygame.KEYDOWN:
+            if game.game_state == 'START':
+                if event.key == pygame.K_s:
+                    game.game_state = 'PLAYING'
+                    game.synth.play_tone(440.0, duration_ms=200, volume=0.3)
+                    
+            elif game.game_state == 'GAMEOVER':
+                if event.key == pygame.K_r:
+                    game.reset()
+                    game.game_state = 'PLAYING'
+                    
+            elif game.game_state == 'PLAYING':
+                if event.key == pygame.K_q:
+                    running = False
+                elif event.key == pygame.K_p:
+                    game.game_state = 'SHOP'
+                    game.synth.play_tone(330.0, duration_ms=100, volume=0.2)
+                    
+            elif game.game_state == 'SHOP':
+                if event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
+                    game.game_state = 'PLAYING'
+                elif event.key == pygame.K_1:
+                    if game.coins >= game.speed_cost:
+                        game.coins -= game.speed_cost
+                        game.player_speed += 1
+                        game.speed_cost += 3
+                        game.synth.play_tone(587.33, duration_ms=150, volume=0.4, wave_type='sine')
+                elif event.key == pygame.K_2:
+                    if game.coins >= game.size_cost:
+                        game.coins -= game.size_cost
+                        game.player_size += 2
+                        game.size_cost += 2
+                        game.synth.play_tone(659.25, duration_ms=150, volume=0.4, wave_type='sine')
+
+    game.update()
+    game.draw(screen)
+    
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
                 
 
 
